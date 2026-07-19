@@ -133,18 +133,26 @@ class _LoginPageState extends State<LoginPage> {
                 height: 72,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Center(
-              child: Text(
-                'Admin Web Portal',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w500,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'ADMIN CONSOLE',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                    letterSpacing: 0.6,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 36),
+            const SizedBox(height: 32),
 
             // Email
             _label('Email Address'),

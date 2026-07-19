@@ -24,12 +24,20 @@ class RecentUsersTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Card(
       title: 'Recent Users',
-      child: SingleChildScrollView(
+      trailing: _countBadge(users.length),
+      child: users.isEmpty
+          ? const _EmptyState(
+              icon: Icons.people_outline, message: 'No users yet')
+          : SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
           showCheckboxColumn: false,
           headingRowColor:
-              MaterialStateProperty.all(AppColors.surfaceElevated.withOpacity(0.3)),
+              MaterialStateProperty.all(AppColors.surfaceElevated.withOpacity(0.4)),
+          dataRowColor: MaterialStateProperty.resolveWith((states) =>
+              states.contains(MaterialState.hovered)
+                  ? AppColors.surfaceHover
+                  : Colors.transparent),
           dividerThickness: 1,
           horizontalMargin: 16,
           sortColumnIndex: sortField == 'name'
@@ -99,12 +107,20 @@ class RecentOpportunitiesTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Card(
       title: 'Recent Opportunities',
-      child: SingleChildScrollView(
+      trailing: _countBadge(opportunities.length),
+      child: opportunities.isEmpty
+          ? const _EmptyState(
+              icon: Icons.business_center_outlined, message: 'No opportunities yet')
+          : SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
           showCheckboxColumn: false,
           headingRowColor:
-              MaterialStateProperty.all(AppColors.surfaceElevated.withOpacity(0.3)),
+              MaterialStateProperty.all(AppColors.surfaceElevated.withOpacity(0.4)),
+          dataRowColor: MaterialStateProperty.resolveWith((states) =>
+              states.contains(MaterialState.hovered)
+                  ? AppColors.surfaceHover
+                  : Colors.transparent),
           dividerThickness: 1,
           horizontalMargin: 16,
           columns: [
@@ -149,12 +165,20 @@ class RecentConversationsTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Card(
       title: 'Recent Conversations',
-      child: SingleChildScrollView(
+      trailing: _countBadge(conversations.length),
+      child: conversations.isEmpty
+          ? const _EmptyState(
+              icon: Icons.forum_outlined, message: 'No conversations yet')
+          : SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
           showCheckboxColumn: false,
           headingRowColor:
-              MaterialStateProperty.all(AppColors.surfaceElevated.withOpacity(0.3)),
+              MaterialStateProperty.all(AppColors.surfaceElevated.withOpacity(0.4)),
+          dataRowColor: MaterialStateProperty.resolveWith((states) =>
+              states.contains(MaterialState.hovered)
+                  ? AppColors.surfaceHover
+                  : Colors.transparent),
           dividerThickness: 1,
           horizontalMargin: 16,
           columns: [
@@ -197,16 +221,53 @@ class RecentConversationsTable extends StatelessWidget {
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
-Widget _headerLabel(String text) => Text(
-      text,
-      style: GoogleFonts.inter(
-          fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+Widget _headerLabel(String text) => Text(text, style: AppTextStyles.tableHeader);
+
+Widget _countBadge(int count) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Text(
+        '$count shown',
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textSecondary,
+        ),
+      ),
     );
+
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String message;
+  const _EmptyState({required this.icon, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: AppColors.textMuted, size: 32),
+            const SizedBox(height: 10),
+            Text(message, style: GoogleFonts.inter(color: AppColors.textSecondary)),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _Card extends StatelessWidget {
   final String title;
   final Widget child;
-  const _Card({required this.title, required this.child});
+  final Widget? trailing;
+  const _Card({required this.title, required this.child, this.trailing});
 
   @override
   Widget build(BuildContext context) {
@@ -214,19 +275,25 @@ class _Card extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.14),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(title, style: AppTextStyles.sectionTitle.copyWith(fontSize: 16)),
+              if (trailing != null) trailing!,
+            ],
           ),
           const SizedBox(height: 16),
           child,

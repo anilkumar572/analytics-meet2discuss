@@ -120,3 +120,15 @@ class GrowthDataPoint {
     required this.value,
   });
 }
+
+extension GrowthTrend on List<GrowthDataPoint> {
+  /// Month-over-month percent change between the last two points, or null
+  /// if there isn't enough real data to compare (never fabricated).
+  double? get monthOverMonthChange {
+    if (length < 2) return null;
+    final previous = this[length - 2].value;
+    final current = this[length - 1].value;
+    if (previous == 0) return current > 0 ? 100.0 : null;
+    return ((current - previous) / previous) * 100;
+  }
+}

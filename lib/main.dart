@@ -71,6 +71,18 @@ class MyApp extends StatelessWidget {
                 color: AppColors.border,
                 thickness: 1,
               ),
+              scrollbarTheme: ScrollbarThemeData(
+                thumbColor: MaterialStateProperty.all(
+                    AppColors.textMuted.withOpacity(0.4)),
+                radius: const Radius.circular(8),
+              ),
+              snackBarTheme: SnackBarThemeData(
+                backgroundColor: AppColors.surfaceElevated,
+                contentTextStyle: GoogleFonts.inter(color: AppColors.textPrimary),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
             ),
             routerConfig: AppRouter.router(context),
           );

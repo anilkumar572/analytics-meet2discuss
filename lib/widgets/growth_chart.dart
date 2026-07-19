@@ -20,57 +20,96 @@ class GrowthChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (dataPoints.isEmpty) {
-      return Container(
+    if (dataPoints.isEmpty || dataPoints.every((p) => p.value == 0)) {
+      return _shell(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: AppTextStyles.sectionTitle.copyWith(fontSize: 15)),
+            const Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.show_chart_rounded,
+                        color: AppColors.textMuted, size: 32),
+                    SizedBox(height: 10),
+                    Text('No data available yet',
+                        style: TextStyle(color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
         height: 300,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border.withOpacity(0.5)),
-        ),
-        child: Center(
-          child: Text(
-            'No data available',
-            style: GoogleFonts.inter(color: AppColors.textSecondary),
-          ),
-        ),
       );
     }
 
-    double maxVal =
-        dataPoints.map((p) => p.value).reduce((a, b) => a > b ? a : b);
+    final values = dataPoints.map((p) => p.value).toList();
+    double maxVal = values.reduce((a, b) => a > b ? a : b);
     if (maxVal == 0) maxVal = 10;
-    final double yLimit = (maxVal * 1.2).ceilToDouble();
+    final double yLimit = (maxVal * 1.25).ceilToDouble();
+    final avg = values.reduce((a, b) => a + b) / values.length;
+    final trend = dataPoints.monthOverMonthChange;
+    final current = dataPoints.last.value;
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
-      ),
+    return _shell(
+      gradientColors: gradientColors,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: AppTextStyles.sectionTitle.copyWith(fontSize: 14)),
+                    const SizedBox(height: 6),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          current.toInt().toString(),
+                          style: GoogleFonts.outfit(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text('this month',
+                              style: GoogleFonts.inter(
+                                  fontSize: 11, color: AppColors.textMuted)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (trend != null) _trendPill(trend),
+            ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           SizedBox(
-            height: 260,
+            height: 240,
             child: LineChart(
+              duration: const Duration(milliseconds: 700),
+              curve: Curves.easeInOutCubic,
               LineChartData(
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
                   getDrawingHorizontalLine: (value) => FlLine(
-                    color: AppColors.border.withOpacity(0.25),
+                    color: AppColors.border.withOpacity(0.6),
                     strokeWidth: 1,
+                    dashArray: const [5, 5],
                   ),
                 ),
                 titlesData: FlTitlesData(
@@ -82,7 +121,7 @@ class GrowthChart extends StatelessWidget {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 40,
+                      reservedSize: 36,
                       getTitlesWidget: (value, meta) => Text(
                         value.toInt().toString(),
                         style: GoogleFonts.inter(
@@ -122,20 +161,42 @@ class GrowthChart extends StatelessWidget {
                 maxX: (dataPoints.length - 1).toDouble(),
                 minY: 0,
                 maxY: yLimit,
+                extraLinesData: ExtraLinesData(
+                  horizontalLines: [
+                    HorizontalLine(
+                      y: avg,
+                      color: AppColors.textMuted.withOpacity(0.5),
+                      strokeWidth: 1,
+                      dashArray: const [3, 4],
+                      label: HorizontalLineLabel(
+                        show: true,
+                        alignment: Alignment.topRight,
+                        padding: const EdgeInsets.only(bottom: 4, right: 4),
+                        style: GoogleFonts.inter(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textMuted,
+                        ),
+                        labelResolver: (_) => 'avg ${avg.toStringAsFixed(0)}',
+                      ),
+                    ),
+                  ],
+                ),
                 lineBarsData: [
                   LineChartBarData(
                     spots: dataPoints.asMap().entries.map((e) {
                       return FlSpot(e.key.toDouble(), e.value.value);
                     }).toList(),
                     isCurved: true,
+                    curveSmoothness: 0.32,
                     gradient: LinearGradient(colors: gradientColors),
-                    barWidth: 3,
+                    barWidth: 3.5,
                     isStrokeCapRound: true,
                     dotData: FlDotData(
                       show: true,
                       getDotPainter: (spot, percent, barData, index) =>
                           FlDotCirclePainter(
-                        radius: 4,
+                        radius: index == dataPoints.length - 1 ? 5 : 3.5,
                         color: lineColor,
                         strokeWidth: 2,
                         strokeColor: AppColors.surface,
@@ -144,9 +205,10 @@ class GrowthChart extends StatelessWidget {
                     belowBarData: BarAreaData(
                       show: true,
                       gradient: LinearGradient(
-                        colors: gradientColors
-                            .map((c) => c.withOpacity(0.12))
-                            .toList(),
+                        colors: [
+                          gradientColors.first.withOpacity(0.28),
+                          gradientColors.last.withOpacity(0.02),
+                        ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       ),
@@ -156,7 +218,9 @@ class GrowthChart extends StatelessWidget {
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
                     tooltipBgColor: AppColors.surfaceElevated,
-                    tooltipRoundedRadius: 8,
+                    tooltipRoundedRadius: 10,
+                    tooltipPadding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     getTooltipItems: (spots) => spots
                         .map(
                           (s) => LineTooltipItem(
@@ -170,8 +234,104 @@ class GrowthChart extends StatelessWidget {
                         )
                         .toList(),
                   ),
+                  getTouchedSpotIndicator: (barData, spotIndexes) {
+                    return spotIndexes.map((_) {
+                      return TouchedSpotIndicatorData(
+                        FlLine(color: lineColor.withOpacity(0.4), strokeWidth: 2),
+                        FlDotData(
+                          getDotPainter: (spot, percent, barData, index) =>
+                              FlDotCirclePainter(
+                            radius: 6,
+                            color: lineColor,
+                            strokeWidth: 2,
+                            strokeColor: Colors.white,
+                          ),
+                        ),
+                      );
+                    }).toList();
+                  },
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _shell({required Widget child, List<Color>? gradientColors, double? height}) {
+    final accentBar = gradientColors == null
+        ? const SizedBox(height: 20)
+        : Padding(
+            padding: const EdgeInsets.only(top: 20, bottom: 4),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: Container(
+                height: 3,
+                width: 36,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: gradientColors),
+                ),
+              ),
+            ),
+          );
+
+    // The empty-state variant needs a fixed height + Expanded content;
+    // the populated variant sizes to its (already height-bound) chart.
+    final body = height != null
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [accentBar, Expanded(child: child)],
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [accentBar, child],
+          );
+
+    return Container(
+      height: height,
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: body,
+    );
+  }
+
+  Widget _trendPill(double percent) {
+    final isUp = percent >= 0;
+    final color = isUp ? AppColors.success : AppColors.danger;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.14),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isUp ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+            size: 12,
+            color: color,
+          ),
+          const SizedBox(width: 2),
+          Text(
+            '${percent.abs().toStringAsFixed(0)}% MoM',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
         ],
