@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -42,28 +43,35 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          // Background orbs
+          // Background orbs — real gaussian blur for a soft ambient glow
+          // rather than a flat low-opacity circle.
           Positioned(
             top: -size.height * 0.2,
             left: -size.width * 0.1,
-            child: Container(
-              width: size.width * 0.4,
-              height: size.width * 0.4,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary.withOpacity(0.15),
+            child: ImageFiltered(
+              imageFilter: ui.ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+              child: Container(
+                width: size.width * 0.4,
+                height: size.width * 0.4,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary.withOpacity(0.28),
+                ),
               ),
             ),
           ),
           Positioned(
             bottom: -size.height * 0.2,
             right: -size.width * 0.1,
-            child: Container(
-              width: size.width * 0.4,
-              height: size.width * 0.4,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.accent.withOpacity(0.12),
+            child: ImageFiltered(
+              imageFilter: ui.ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+              child: Container(
+                width: size.width * 0.4,
+                height: size.width * 0.4,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.accent.withOpacity(0.22),
+                ),
               ),
             ),
           ),
@@ -71,27 +79,39 @@ class _LoginPageState extends State<LoginPage> {
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: BlocConsumer<AuthCubit, AuthState>(
-                listener: (context, state) {
-                  if (state is AuthFailure) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(state.errorMessage),
-                        backgroundColor: AppColors.danger,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeOutCubic,
+                builder: (context, t, child) => Opacity(
+                  opacity: t,
+                  child: Transform.translate(
+                    offset: Offset(0, (1 - t) * 16),
+                    child: child,
+                  ),
+                ),
+                child: BlocConsumer<AuthCubit, AuthState>(
+                  listener: (context, state) {
+                    if (state is AuthFailure) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(state.errorMessage),
+                          backgroundColor: AppColors.danger,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
-                      ),
-                    );
-                  }
-                },
-                builder: (context, state) {
-                  if (state is AccessDenied) {
-                    return _buildAccessDeniedCard(context, state.email);
-                  }
-                  return _buildLoginCard(context, state);
-                },
+                      );
+                    }
+                  },
+                  builder: (context, state) {
+                    if (state is AccessDenied) {
+                      return _buildAccessDeniedCard(context, state.email);
+                    }
+                    return _buildLoginCard(context, state);
+                  },
+                ),
               ),
             ),
           ),

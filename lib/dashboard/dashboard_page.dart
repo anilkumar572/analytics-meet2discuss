@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -125,10 +126,13 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _glowOrb(Color color, double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: color.withOpacity(0.05)),
+    return ImageFiltered(
+      imageFilter: ui.ImageFilter.blur(sigmaX: 90, sigmaY: 90),
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: color.withOpacity(0.16)),
+      ),
     );
   }
 
@@ -596,18 +600,21 @@ class _DashboardPageState extends State<DashboardPage> {
           icon: Icons.people_alt_outlined, iconColor: AppColors.primary,
           progressColor: AppColors.primary,
           progressPercent: s.totalMembers / base,
-          trendPercent: s.memberGrowth.monthOverMonthChange),
+          trendPercent: s.memberGrowth.monthOverMonthChange,
+          sparklineData: s.memberGrowth.map((p) => p.value).toList()),
       StatCard(title: 'Total Opportunities', value: '${s.totalOpportunities}',
           icon: Icons.business_center_outlined, iconColor: AppColors.secondary,
           progressColor: AppColors.secondary,
           progressPercent: s.totalOpportunities / base,
-          trendPercent: s.opportunityGrowth.monthOverMonthChange),
+          trendPercent: s.opportunityGrowth.monthOverMonthChange,
+          sparklineData: s.opportunityGrowth.map((p) => p.value).toList()),
       StatCard(title: 'Total Participants', value: '${s.totalParticipants}',
           icon: Icons.group_work_outlined, iconColor: AppColors.accent,
           progressColor: AppColors.accent,
           progressPercent: s.totalParticipants / base),
       StatCard(title: 'Total Conversations', value: '${s.totalConversations}',
           icon: Icons.forum_outlined, iconColor: AppColors.info,
+          sparklineData: s.conversationGrowth.map((p) => p.value).toList(),
           progressColor: AppColors.info,
           progressPercent: s.totalConversations / base,
           trendPercent: s.conversationGrowth.monthOverMonthChange),
@@ -639,7 +646,12 @@ class _DashboardPageState extends State<DashboardPage> {
     if (mobile) {
       return Column(
         children: charts
-            .expand((c) => [c, const SizedBox(height: 20)])
+            .asMap()
+            .entries
+            .expand((e) => [
+                  _Reveal(delay: Duration(milliseconds: 80 * e.key), child: e.value),
+                  const SizedBox(height: 20),
+                ])
             .toList()
           ..removeLast(),
       );
@@ -657,7 +669,8 @@ class _DashboardPageState extends State<DashboardPage> {
             .entries
             .map((e) => SizedBox(
                   width: tablet && e.key == 2 ? constraints.maxWidth : w,
-                  child: e.value,
+                  child: _Reveal(
+                      delay: Duration(milliseconds: 80 * e.key), child: e.value),
                 ))
             .toList(),
       );
@@ -727,7 +740,48 @@ class _DashboardPageState extends State<DashboardPage> {
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
       childAspectRatio: aspectRatio,
-      children: children,
+      children: [
+        for (var i = 0; i < children.length; i++)
+          _Reveal(delay: Duration(milliseconds: 60 * i), child: children[i]),
+      ],
+    );
+  }
+}
+
+/// Staggered fade + slide-up entrance used for grids and chart rows so the
+/// dashboard cascades in on load instead of popping in all at once.
+class _Reveal extends StatefulWidget {
+  final Widget child;
+  final Duration delay;
+  const _Reveal({required this.child, this.delay = Duration.zero});
+
+  @override
+  State<_Reveal> createState() => _RevealState();
+}
+
+class _RevealState extends State<_Reveal> {
+  bool _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(widget.delay, () {
+      if (mounted) setState(() => _visible = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSlide(
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutCubic,
+      offset: _visible ? Offset.zero : const Offset(0, 0.08),
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOut,
+        opacity: _visible ? 1 : 0,
+        child: widget.child,
+      ),
     );
   }
 }

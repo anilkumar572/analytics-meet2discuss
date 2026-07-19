@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants.dart';
@@ -15,6 +16,11 @@ class StatCard extends StatefulWidget {
   /// than showing a made-up number.
   final double? trendPercent;
 
+  /// Real historical values (e.g. the 6-month growth series) rendered as an
+  /// inline sparkline in place of the progress bar. Null falls back to the
+  /// plain progress bar — never fabricated data.
+  final List<double>? sparklineData;
+
   const StatCard({
     super.key,
     required this.title,
@@ -24,6 +30,7 @@ class StatCard extends StatefulWidget {
     this.progressColor = AppColors.primary,
     this.progressPercent = 0.7,
     this.trendPercent,
+    this.sparklineData,
   });
 
   @override
@@ -113,16 +120,29 @@ class _StatCardState extends State<StatCard> {
                             ],
                           ),
                           const SizedBox(height: 14),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: widget.progressPercent.clamp(0.0, 1.0),
-                              backgroundColor: AppColors.border,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                  widget.progressColor),
-                              minHeight: 4,
+                          if (widget.sparklineData != null &&
+                              widget.sparklineData!.length >= 2)
+                            SizedBox(
+                              height: 32,
+                              width: double.infinity,
+                              child: CustomPaint(
+                                painter: _SparklinePainter(
+                                  widget.sparklineData!,
+                                  widget.progressColor,
+                                ),
+                              ),
+                            )
+                          else
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: widget.progressPercent.clamp(0.0, 1.0),
+                                backgroundColor: AppColors.border,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    widget.progressColor),
+                                minHeight: 4,
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -166,4 +186,63 @@ class _StatCardState extends State<StatCard> {
       ),
     );
   }
+}
+
+/// Lightweight dependency-free sparkline — a filled trend line through real
+/// historical values, used inline in [StatCard] instead of pulling in a
+/// second charting widget for a handful of pixels.
+class _SparklinePainter extends CustomPainter {
+  final List<double> values;
+  final Color color;
+  _SparklinePainter(this.values, this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final minV = values.reduce(math.min);
+    final maxV = values.reduce(math.max);
+    final range = (maxV - minV) == 0 ? 1 : (maxV - minV);
+    final stepX = size.width / (values.length - 1);
+
+    final points = List.generate(values.length, (i) {
+      final x = i * stepX;
+      final y = size.height - ((values[i] - minV) / range) * size.height;
+      return Offset(x, y);
+    });
+
+    final linePath = Path()..moveTo(points.first.dx, points.first.dy);
+    for (final p in points.skip(1)) {
+      linePath.lineTo(p.dx, p.dy);
+    }
+
+    final fillPath = Path.from(linePath)
+      ..lineTo(points.last.dx, size.height)
+      ..lineTo(points.first.dx, size.height)
+      ..close();
+
+    canvas.drawPath(
+      fillPath,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [color.withOpacity(0.28), color.withOpacity(0.0)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
+    );
+
+    canvas.drawPath(
+      linePath,
+      Paint()
+        ..color = color
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    canvas.drawCircle(points.last, 2.6, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SparklinePainter oldDelegate) =>
+      oldDelegate.values != values || oldDelegate.color != color;
 }
